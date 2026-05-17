@@ -10,6 +10,7 @@ Perspective: Exploring Edge AI concepts for embedded systems engineering.
 |------|-------|--------|------------|
 | 01 | OpenMV Setup + Built-in AI Examples | ✅ | FOMO face detection @ 60fps |
 | 02 | Neural Network from Scratch | ✅ | Checkerboard classifier k=2 and k=4 (NumPy only) |
+| 04 | Custom CNN + NPU Deployment | ✅ | Garbage classifier int8 → Vela → AE3 Ethos-U55, 100% NPU |
 
 ## Week 01 — OpenMV Setup + Built-in AI Examples
 - Connected OpenMV AE3 to OpenMV IDE
@@ -33,6 +34,23 @@ Perspective: Exploring Edge AI concepts for embedded systems engineering.
 - `assignment/checkerboard_nn_assignment_k=2.ipynb` — 2-class checkerboard (2-layer network)
 - `assignment/checkerboard_nn_assignment_k=4.ipynb` — 4-class checkerboard (deep network, ReLU, mini-batch SGD, early stopping)
 - `notebooks/` — supplementary OpenMV + desktop prototyping notebooks
+
+## Week 04 — Custom CNN + NPU Deployment
+- Designed and trained a custom garbage classification CNN in Google Colab
+- 6 classes: cardboard, glass, metal, paper, plastic, trash
+- Input: 96×96 RGB, architecture: Conv-BN-ReLU blocks → GlobalAvgPool → Dense
+- Quantized to int8 using TFLite full-integer quantization with representative dataset
+- Compiled for AE3 Ethos-U55 NPU using Arm Vela compiler
+- Diagnosed and fixed `Invoke failed` error caused by wrong Vela system config (`Ethos_U55_High_End_Embedded` → `RTSS_HP_SRAM_OSPI` from AE3-specific `vela.ini`)
+- All 39 operators offloaded to NPU (0% CPU fallback)
+- Deployed and ran live inference on OpenMV AE3 via `classify_garbage_openmv.py`
+- Installed permanent `vela-ae3` wrapper script for future AE3 model compilation
+
+**Files:** `week04-Models/assignment/`
+- `GarbageClassification_CNN.ipynb` — training notebook (Colab)
+- `classify_garbage_openmv.py` — OpenMV inference script (96×96 windowed camera)
+- `models/` — int8 and Vela-compiled `.tflite` models + labels
+- `results/` — models, inference screenshots, Vela compilation notes
 
 # Setup
 - Host: Windows 11 + WSL2 Ubuntu
