@@ -1,0 +1,12 @@
+# Speech Commands dataset (5.5 GB)
+dataset/
+
+# TensorFlow source clone (607 MB)
+tensorflow/
+
+# Training event logs
+logs/
+
+# Collected audio samples (own dataset recordings)
+owndataset/recordings/
+owndataset/*.wav

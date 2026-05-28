@@ -11,6 +11,7 @@ Perspective: Exploring Edge AI concepts for embedded systems engineering.
 | 01 | OpenMV Setup + Built-in AI Examples | ✅ | FOMO face detection @ 60fps |
 | 02 | Neural Network from Scratch | ✅ | Checkerboard classifier k=2 and k=4 (NumPy only) |
 | 04 | Custom CNN + NPU Deployment | ✅ | Garbage classifier int8 → Vela → AE3 Ethos-U55, 100% NPU |
+| 05 | Keyword Spotting on Edge | ✅ | "yes/no" tiny_conv on AE3 NPU — 87.6 µs inference, sliding-window DMA capture |
 
 ## Week 01 — OpenMV Setup + Built-in AI Examples
 - Connected OpenMV AE3 to OpenMV IDE
@@ -51,6 +52,27 @@ Perspective: Exploring Edge AI concepts for embedded systems engineering.
 - `classify_garbage_openmv.py` — OpenMV inference script (96×96 windowed camera)
 - `models/` — int8 and Vela-compiled `.tflite` models + labels
 - `results/` — models, inference screenshots, Vela compilation notes
+
+## Week 05 — Keyword Spotting (RNN / Micro Speech) on Edge
+- Downloaded pretrained TF Micro Speech `tiny_conv` model (18 KB int8, "yes" / "no" keywords)
+- Implemented log-mel spectrogram preprocessing in MicroPython ulab: 49 frames × 40 bins, 30 ms Hann-windowed frames, 20 ms stride, 512-pt FFT, mel filterbank 20–7600 Hz
+- Applied manual int8 quantization (scale = 0.10171568, zero_point = −128) — `ml.Model.predict()` on AE3 does not apply the model's quantization parameters automatically
+- Compiled with Arm Vela for AE3 Ethos-U55 NPU: **87.6 µs inference**, 11,414 inf/s, all 29 ops on NPU (0% CPU fallback)
+- Deployed real-time keyword spotting on OpenMV AE3 via callback-based DMA audio capture
+- Implemented **50% overlap sliding window** (0.5 s step, 1 s window) so words spoken at any time are captured — avoids missed detections at non-overlapping boundaries
+- Diagnosed label-order mismatch between notebook output (`[yes, no, silence, unknown]`) and TF `prepare_words_list` order (`[silence, unknown, yes, no]`)
+- Added diagnostic probability output to identify model generalization gap for Indian accent — model gives 30–97% yes-confidence depending on window alignment vs. 70–93% false no-confidence on word onset
+- Implemented **asymmetric yes/no thresholds** (yes ≥ 30%, no ≥ 70%) and **yes-sticky burst logic** (once "yes" is buffered in a burst, a subsequent "no" window cannot overwrite it) to recover correct detections
+- Built `ae3_recorder.py` MicroPython script for on-device audio dataset collection (saves WAV files to SD card)
+
+**Files:** `week05-RNN-For-EdgeAI/`
+- `Train_micro_speech_model_only.ipynb` — notebook: download checkpoint, quantize, export TFLite
+- `models/` — float32, int8, and C-array versions of the tiny_conv model
+- `results/microspeech_openmv.py` — OpenMV AE3 inference script (sliding window, burst-print, asymmetric thresholds)
+- `results/microspeech_model_vela.tflite` — Vela-compiled model for Ethos-U55
+- `results/microspeech_model_summary_RTSS_HP_SRAM_OSPI.csv` — Vela performance report
+- `owndataset/ae3_recorder.py` — on-device WAV recorder for collecting custom keyword samples
+- `owndataset/collect_audio.py` — host-side script to trigger recordings over USB serial
 
 # Setup
 - Host: Windows 11 + WSL2 Ubuntu
